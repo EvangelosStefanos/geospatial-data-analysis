@@ -1,0 +1,9 @@
+# Docker Compose version v2.29.7
+services:
+  geospatial-data-analysis:
+    image: geospatial-data-analysis
+    build: .
+    volumes:
+      - data:/app/data
+volumes:
+  data:
