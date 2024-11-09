@@ -8,6 +8,8 @@ from oauthlib.oauth2 import BackendApplicationClient
 from requests_oauthlib import OAuth2Session
 import matplotlib.pyplot as plt
 from pathlib import Path
+import numpy as np
+import detection
 
 ################################################################################
 ####  FILE STRUCTRURE
@@ -57,54 +59,93 @@ oauth.register_compliance_hook("access_token_response", sentinelhub_compliance_h
 ################################################################################
 
 aoi_coords_wgs84 = [22.962284, 40.525283, 23.087597, 40.567220]  # thermi bbox
+# aoi_coords_wgs84 = [23.00, 40.54, 23.04, 40.58]  # thermi bbox
 resolution = 10
 aoi_bbox = sentinelhub.BBox(bbox=aoi_coords_wgs84, crs=sentinelhub.CRS.WGS84)
 aoi_size = sentinelhub.bbox_to_dimensions(aoi_bbox, resolution=resolution)
 
 print(f"Image shape at {resolution} m resolution: {aoi_size} pixels")
 
-################################################################################
-####  CATALOG  https://documentation.dataspace.copernicus.eu/notebook-samples/sentinelhub/introduction_to_SH_APIs.html#catalog-api
-################################################################################
-
-# catalog = sentinelhub.SentinelHubCatalog(config=config)
-# aoi_bbox = sentinelhub.BBox(bbox=aoi_coords_wgs84, crs=sentinelhub.CRS.WGS84)
-# time_interval = "2020-01-01", "2024-01-01"
-
-# search_iterator = catalog.search(
-#     sentinelhub.DataCollection.SENTINEL2_L2A,
-#     bbox=aoi_bbox,
-#     time=time_interval,
-#     fields={"include": ["id", "properties.datetime"], "exclude": []},
-# )
-
-# results = list(search_iterator)
-# print("Total number of results:", len(results))
-# print(results)
 
 ################################################################################
 ####  PROCESSING API  https://documentation.dataspace.copernicus.eu/notebook-samples/sentinelhub/introduction_to_SH_APIs.html#example-1-true-color-image
 ################################################################################
+def save_image(image, fname):
+    import matplotlib
+
+    dpi = matplotlib.rcParams["figure.dpi"]
+    height, width, depth = image.shape
+
+    # What size does the figure need to be in inches to fit the image?
+    figsize = width / float(dpi), height / float(dpi)
+
+    # Create a figure of the right size with one axes that takes up the full figure
+    fig = plt.figure(figsize=figsize)
+    ax = fig.add_axes([0, 0, 1, 1])
+
+    # Hide spines, ticks, etc.
+    ax.axis("off")
+
+    # Display the image.
+    ax.imshow(image)
+
+    plt.savefig(fname=fname)
+    plt.close(fig)
+    return
 
 
 import processing
 import evalscripts
 
+start_date = {
+    "year" : 2023,
+    "month" : 1,
+}
+end_date = {
+    "year": 2023,
+    "month": 6,
+}
 
-time_interval = ("2020-01-01", "2024-01-01")
+START_DATE_DAY = 1
+END_DATE_DAY = 25
+time_intervals = []
+for year in range(start_date["year"], end_date["year"]+1):
+    if year == start_date["year"]:
+        month_range = range(start_date["month"], 12+1)
+    elif year == end_date["year"]:
+        month_range = range(1, end_date["month"]+1)
+    else:
+        month_range = range(1, 12+1)
+    for month in month_range:
+        time_intervals += [(
+            f"{year}-{month:02d}-{START_DATE_DAY:02d}", 
+            f"{year}-{month:02d}-{END_DATE_DAY:02d}"
+            )]
+for i, time_interval in enumerate(time_intervals):
+    ####  true color image
 
-####  true color image
+    response = processing.make_request(
+        evalscript=evalscripts.TRUE_COLOR,
+        time_interval=time_interval,
+        aoi_bbox=aoi_bbox,
+        aoi_size=aoi_size,
+        config=config,
+    )
 
-response = processing.make_request(
-    evalscript=evalscripts.TRUE_COLOR,
-    time_interval=time_interval,
-    aoi_bbox=aoi_bbox,
-    aoi_size=aoi_size,
-    config=config,
-)
-image = response[0]
-processing.plot_image(image, factor=3.5 / 255, clip_range=(0, 1))
-plt.savefig(fname=constants.OUTPUT_DIR + "/thermi_true_color.png")
+    image = response[0]
+    save_image(
+        np.clip(image * 3.5 / 255, 0, 1),
+        f"{constants.OUTPUT_DIR}/thermi_true_color_{i}.png",
+    )
+    print(time_interval)
+    # image = get_image(time_interval, f"{constants.OUTPUT_DIR}/detection_{i}.png")
+    image = np.clip((3.5 / 255.0) * image, 0, 1)
+    image = detection.detect(image)
+    save_image(image=image, fname=f"{constants.OUTPUT_DIR}/detection_{i}.jpeg")
+    # detect_objects(image)
+    # detect_changes(image, image_previous)
+
+exit(0)
 
 ####  ndbi image
 

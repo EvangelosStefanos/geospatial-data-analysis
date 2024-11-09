@@ -2,6 +2,7 @@
 
 ```
 docker cp geospatial-data-analysis-geospatial-data-analysis-1:/app/output .
+docker cp geospatial-data-analysis-geospatial-data-analysis-1:/app/runs ./out
 docker cp geospatial-data-analysis-geospatial-data-analysis-1:/app/reqs.txt ./reqs.txt
 ```
 
@@ -9,7 +10,7 @@ docker cp geospatial-data-analysis-geospatial-data-analysis-1:/app/reqs.txt ./re
 
 - [ ] Add object detection processing (YOLOv8 + SAHI)
 - [ ] Add urban change detection processing (STANet or BIT)
-- [ ] Add index based urban change detection
+- [ ] Add index based urban change detection - [ENDISI](https://docs.digitalearthafrica.org/en/latest/sandbox/notebooks/Real_world_examples/Urban_change_detection.html)
 - [ ] Complete the Satellite Image Collections sections
 - [ ] Add database support
 - [ ] Rewrite as web API
@@ -32,3 +33,12 @@ This section contains various sources of satellite image collections separated i
 
 - https://intelligence.airbus.com/imagery/our-optical-and-radar-satellite-imagery/
 - https://skywatch.com/products/explore/
+
+
+## Datasets
+
+- Dior
+- [Dota](https://captain-whu.github.io/DOTA/index.html)
+- [xView](https://xviewdataset.org/)
+- https://jss367.github.io/overhead-imagery-datasets-for-object-detection.html
+- https://github.com/satellite-image-deep-learning/datasets/tree/main
