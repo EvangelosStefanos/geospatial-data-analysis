@@ -1,10 +1,10 @@
-# fastapi[standard] matplotlib pandas requests-oauthlib sentinelhub supervision inference ultralytics transformers
-fastapi[standard]
+# fastapi[standard] matplotlib pandas requests-oauthlib sentinelhub supervision inference transformers
+# fastapi[standard]
 matplotlib
 pandas
 requests-oauthlib
-sentinelhub
+# sentinelhub
 supervision
+torchgeo[all]
 #inference
-ultralytics
 #transformers

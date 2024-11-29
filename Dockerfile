@@ -1,19 +1,17 @@
 # Docker version 27.3.1
-FROM python:3.9
-
-RUN apt-get update && apt-get install ffmpeg libsm6 libxext6  -y
+FROM ultralytics/ultralytics:8.3.28
 
 WORKDIR /app
 
 COPY requirements.txt requirements.txt
 
-RUN pip install -r requirements.txt
+RUN pip install -r requirements.txt && pip freeze > reqs.txt
 
-RUN pip freeze > reqs.txt
+COPY model/ model/
 
 COPY src/ src/
 
-EXPOSE 80/tcp
+# EXPOSE 80/tcp
 
 CMD [ "python", "src/main.py" ]
 

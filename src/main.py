@@ -3,13 +3,17 @@
 ################################################################################
 
 import constants
-import sentinelhub
-from oauthlib.oauth2 import BackendApplicationClient
-from requests_oauthlib import OAuth2Session
+# import sentinelhub
+# from oauthlib.oauth2 import BackendApplicationClient
+# from requests_oauthlib import OAuth2Session
 import matplotlib.pyplot as plt
 from pathlib import Path
 import numpy as np
 import detection
+
+from torch.utils.data import DataLoader
+from torchgeo.datasets import EnviroAtlas, stack_samples
+from torchgeo.samplers import RandomGeoSampler
 
 ################################################################################
 ####  FILE STRUCTRURE
@@ -17,6 +21,48 @@ import detection
 
 Path(constants.DATA_DIR).mkdir(exist_ok=True)
 Path(constants.OUTPUT_DIR).mkdir(exist_ok=True)
+
+
+def save_image(image, fname):
+    import matplotlib
+
+    dpi = matplotlib.rcParams["figure.dpi"]
+    height, width, depth = image.shape
+
+    # What size does the figure need to be in inches to fit the image?
+    figsize = width / float(dpi), height / float(dpi)
+
+    # Create a figure of the right size with one axes that takes up the full figure
+    fig = plt.figure(figsize=figsize)
+    ax = fig.add_axes([0, 0, 1, 1])
+
+    # Hide spines, ticks, etc.
+    ax.axis("off")
+
+    # Display the image.
+    ax.imshow(image)
+
+    plt.savefig(fname=fname)
+    plt.close(fig)
+    return
+
+
+dataset = EnviroAtlas(root="/app/data", download=True)
+sampler = RandomGeoSampler(dataset, size=1024, length=10)
+dataloader = DataLoader(dataset, sampler=sampler, collate_fn=stack_samples)
+
+for i, sample in enumerate(dataloader):
+    image = sample['image']
+    image = np.ascontiguousarray(image[0,:3,:,:].T, dtype=np.uint8) # unnormalized BGRA -> unnormalized RGB
+
+    results = detection.detect(image)
+
+    fname = f"{constants.OUTPUT_DIR}/{i}.jpg"
+    save_image(image=results["annotated_image"], fname=fname)
+    
+
+exit(0)
+
 
 ################################################################################
 ####  SET UP CONFIGURATION PROFILE  https://documentation.dataspace.copernicus.eu/notebook-samples/sentinelhub/introduction_to_SH_APIs.html#credentials
@@ -58,7 +104,9 @@ oauth.register_compliance_hook("access_token_response", sentinelhub_compliance_h
 ####  SET AREA OF INTEREST  https://documentation.dataspace.copernicus.eu/notebook-samples/sentinelhub/introduction_to_SH_APIs.html#setting-an-area-of-interest
 ################################################################################
 
-aoi_coords_wgs84 = [22.962284, 40.525283, 23.087597, 40.567220]  # thermi bbox
+# aoi_coords_wgs84 = [22.962284, 40.525283, 23.087597, 40.567220]  # thermi bbox
+# aoi_coords_wgs84 = [22.902288,40.626754,22.939453,40.642940]  # thess port
+aoi_coords_wgs84 = [22.929239,40.568328,22.960224,40.592969]  # kalamaria
 # aoi_coords_wgs84 = [23.00, 40.54, 23.04, 40.58]  # thermi bbox
 resolution = 10
 aoi_bbox = sentinelhub.BBox(bbox=aoi_coords_wgs84, crs=sentinelhub.CRS.WGS84)
@@ -110,12 +158,13 @@ START_DATE_DAY = 1
 END_DATE_DAY = 25
 time_intervals = []
 for year in range(start_date["year"], end_date["year"]+1):
+    start_month = 1
+    end_month = 12
     if year == start_date["year"]:
-        month_range = range(start_date["month"], 12+1)
-    elif year == end_date["year"]:
-        month_range = range(1, end_date["month"]+1)
-    else:
-        month_range = range(1, 12+1)
+        start_month = start_date["month"]
+    if year == end_date["year"]:
+        end_month = end_date["month"]
+    month_range = range(start_month, end_month+1)
     for month in month_range:
         time_intervals += [(
             f"{year}-{month:02d}-{START_DATE_DAY:02d}", 
