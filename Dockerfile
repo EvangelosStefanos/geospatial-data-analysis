@@ -7,7 +7,7 @@ COPY requirements.txt requirements.txt
 
 RUN pip install -r requirements.txt && pip freeze > reqs.txt
 
-COPY model/ model/
+COPY weights/ weights/
 
 COPY src/ src/
 

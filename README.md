@@ -37,6 +37,7 @@ This section contains various sources of satellite image collections separated i
 - https://www.iqt.org/library/the-rareplanes-dataset
 - https://torchgeo.readthedocs.io/en/stable/api/datasets.html
 - https://planetarycomputer.microsoft.com/catalog
+- https://spacedata.copernicus.eu/worldview-2
 
 
 ### Commercial Satellite Image Collections
@@ -77,3 +78,6 @@ This section contains various sources of satellite image collections separated i
 - https://torchgeo.readthedocs.io/en/stable/api/datasets.html#spacenet
 - https://torchgeo.readthedocs.io/en/stable/api/datasets.html#uc-merced
 - **https://torchgeo.readthedocs.io/en/stable/api/datasets.html#vhr-10**
+
+https://torchgeo.readthedocs.io/en/stable/api/datasets.html
+https://arxiv.org/abs/2107.12283 

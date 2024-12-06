@@ -14,6 +14,7 @@ import detection
 from torch.utils.data import DataLoader
 from torchgeo.datasets import EnviroAtlas, stack_samples
 from torchgeo.samplers import RandomGeoSampler
+import torch
 
 ################################################################################
 ####  FILE STRUCTRURE
@@ -47,13 +48,14 @@ def save_image(image, fname):
     return
 
 
+torch.manual_seed(0)
 dataset = EnviroAtlas(root="/app/data", download=True)
 sampler = RandomGeoSampler(dataset, size=1024, length=10)
 dataloader = DataLoader(dataset, sampler=sampler, collate_fn=stack_samples)
 
 for i, sample in enumerate(dataloader):
     image = sample['image']
-    image = np.ascontiguousarray(image[0,:3,:,:].T, dtype=np.uint8) # unnormalized BGRA -> unnormalized RGB
+    image = np.ascontiguousarray(image[0,:3,:,:].T, dtype=np.uint8) # unnormalized BGRA (b, c, h, w) -> contiguous unnormalized RGB (w, h, c)
 
     results = detection.detect(image)
 
