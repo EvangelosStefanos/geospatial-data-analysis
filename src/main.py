@@ -2,6 +2,9 @@
 ####  IMPORTS
 ################################################################################
 
+import lightning.pytorch
+import torchgeo.datamodules
+import torchgeo.trainers
 import constants
 # import sentinelhub
 # from oauthlib.oauth2 import BackendApplicationClient
@@ -12,9 +15,11 @@ import numpy as np
 import detection
 
 from torch.utils.data import DataLoader
-from torchgeo.datasets import EnviroAtlas, stack_samples
+from torchgeo.datasets import EnviroAtlas, stack_samples, CaBuAr
 from torchgeo.samplers import RandomGeoSampler
 import torch
+import lightning
+import torchgeo
 
 ################################################################################
 ####  FILE STRUCTRURE
@@ -22,6 +27,7 @@ import torch
 
 Path(constants.DATA_DIR).mkdir(exist_ok=True)
 Path(constants.OUTPUT_DIR).mkdir(exist_ok=True)
+
 
 
 def save_image(image, fname):
@@ -48,19 +54,60 @@ def save_image(image, fname):
     return
 
 
+batch_size = 8
+num_workers = 0
+max_epochs = 10
+fast_dev_run = False
+accelerator = 'gpu' if torch.cuda.is_available() else 'cpu'
+DATA_ROOT = "/app/data"
+
 torch.manual_seed(0)
-dataset = EnviroAtlas(root="/app/data", download=True)
-sampler = RandomGeoSampler(dataset, size=1024, length=10)
-dataloader = DataLoader(dataset, sampler=sampler, collate_fn=stack_samples)
+
+task = torchgeo.trainers.SemanticSegmentationTask(
+    model='unet',
+    loss='jaccard',
+    weights=None,
+    in_channels=6,
+    num_classes=2,
+    lr=0.001,
+    patience=100,
+)
+trainer = lightning.pytorch.Trainer(
+    accelerator=accelerator,
+    default_root_dir=constants.OUTPUT_DIR,
+    fast_dev_run=fast_dev_run,
+    log_every_n_steps=1,
+    min_epochs=1,
+    max_epochs=max_epochs,
+)
+datamodule = torchgeo.datamodules.CaBuArDataModule(
+    root=DATA_ROOT, batch_size=batch_size, num_workers=num_workers, download=True, bands=("B02", "B03", "B04")
+)
+
+
+trainer.fit(model=task, datamodule=datamodule)
+trainer.validate(model=task, datamodule=datamodule)
+
+
+"""
+dataset = CaBuAr(root="/app/data", download=True)
+# sampler = RandomGeoSampler(dataset, size=1024, length=10)
+dataloader = DataLoader(dataset, sampler=None, collate_fn=stack_samples)
 
 for i, sample in enumerate(dataloader):
-    image = sample['image']
-    image = np.ascontiguousarray(image[0,:3,:,:].T, dtype=np.uint8) # unnormalized BGRA (b, c, h, w) -> contiguous unnormalized RGB (w, h, c)
+    image = sample['image'] # unnormalized BGRA (b, 2*c, h, w)
+    print(image.shape)
+    print(sample["mask"].shape) # (b, h, w)
+    # image = np.ascontiguousarray(image[0,:3,:,:].T, dtype=np.uint8) # unnormalized BGRA (b, 2*c, h, w) -> contiguous unnormalized RGB (w, h, 2*c)
+    # print(image.shape)
 
-    results = detection.detect(image)
+    # results = detection.detect(image)
 
-    fname = f"{constants.OUTPUT_DIR}/{i}.jpg"
-    save_image(image=results["annotated_image"], fname=fname)
+    # fname = f"{constants.OUTPUT_DIR}/{i}.jpg"
+    # save_image(image=results["annotated_image"], fname=fname)
+    if i > 9:
+        break
+"""
     
 
 exit(0)
