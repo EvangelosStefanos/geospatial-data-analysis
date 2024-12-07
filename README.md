@@ -1,7 +1,7 @@
 ## geospatial-data-analysis (*Work In Progress*)
 
 ```
-docker cp geospatial-data-analysis-geospatial-data-analysis-1:/app/output ./output_1
+docker cp geospatial-data-analysis-geospatial-data-analysis-1:/app/output ./outputs/1
 ```
 
 <!--

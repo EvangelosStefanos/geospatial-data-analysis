@@ -54,8 +54,8 @@ def save_image(image, fname):
     return
 
 
-batch_size = 8
-num_workers = 0
+batch_size = 1
+num_workers = 1
 max_epochs = 10
 fast_dev_run = False
 accelerator = 'gpu' if torch.cuda.is_available() else 'cpu'
@@ -87,6 +87,12 @@ datamodule = torchgeo.datamodules.CaBuArDataModule(
 
 trainer.fit(model=task, datamodule=datamodule)
 trainer.validate(model=task, datamodule=datamodule)
+
+# TODO
+# 1. visualize model input data
+# 2. visualize model output labels
+# 3. connect sentinel-2 data to pipeline
+# 4. test correctness
 
 
 """
