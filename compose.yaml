@@ -1,16 +1,26 @@
 # Docker Compose version v2.29.7
 services:
+  geospatial-data-analysis-tensorboard:
+    image: geospatial-data-analysis-tensorboard
+    build: ./tensorboard
+    volumes:
+      - output:/app/output:ro
+    ports:
+      - 6006:6006
   geospatial-data-analysis:
     image: geospatial-data-analysis
     build: .
     volumes:
       - data:/app/data
+      - output:/app/output
+    ipc: host
     deploy:
       resources:
         reservations:
           devices:
             - driver: nvidia
               count: 1
-              capabilities: [gpu]
+              capabilities: [ gpu ]
 volumes:
   data:
+  output:

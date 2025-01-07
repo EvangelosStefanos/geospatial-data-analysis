@@ -1,10 +1,7 @@
 # Docker version 27.3.1
+# Volume (bind-mount, read-only) at /app/output
 FROM tensorflow/tensorflow:2.18.0
-
-WORKDIR /app
 
 EXPOSE 6006/tcp
 
-VOLUME [ "/app/outputs" ]
-
-CMD [ "tensorboard", "--logdir", "outputs", "--bind_all" ]
+CMD [ "tensorboard", "--logdir", "/app/output", "--bind_all" ]

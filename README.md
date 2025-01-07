@@ -20,6 +20,8 @@ docker cp geospatial-data-analysis-geospatial-data-analysis-1:/app/reqs.txt ./re
 - [ ] Rewrite as web API
 - [ ] Add https
 
+<!--
+
 ## Satellite Image Collections
 
 This section contains various sources of satellite image collections separated in two categories, those are do not require payment and those that do.
@@ -81,3 +83,5 @@ This section contains various sources of satellite image collections separated i
 
 https://torchgeo.readthedocs.io/en/stable/api/datasets.html
 https://arxiv.org/abs/2107.12283 
+
+>

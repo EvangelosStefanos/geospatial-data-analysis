@@ -24,6 +24,8 @@ import lightning
 import torchgeo
 
 import mytasks
+from lightning.pytorch.callbacks import ModelCheckpoint
+import shutil
 
 ################################################################################
 ####  FILE STRUCTRURE
@@ -31,6 +33,15 @@ import mytasks
 
 Path(constants.DATA_DIR).mkdir(exist_ok=True)
 Path(constants.OUTPUT_DIR).mkdir(exist_ok=True)
+
+
+CLEANUP = True  # clean up previous execution leftovers
+if CLEANUP:
+    for path in ["output/checkpoints", "output/lightning_logs"]:
+        try:
+            shutil.rmtree(path=path)
+        except FileNotFoundError:
+            pass
 
 
 def save_image(image, fname):
@@ -57,9 +68,42 @@ def save_image(image, fname):
     return
 
 
+def save_prediction(images, fname):
+    import matplotlib
+
+    dpi = matplotlib.rcParams["figure.dpi"]
+    height = (
+        images["images1"].shape[1]
+        + images["images2"].shape[1]
+        + images["mask"].shape[1]
+        + images["prediction"].shape[1]
+    )
+    width = (
+        images["images1"].shape[2]
+        + images["images2"].shape[2]
+        + images["mask"].shape[2]
+        + images["prediction"].shape[2]
+    )
+
+    fig, axs = plt.subplots(nrows=1, ncols=4, figsize=(width, height))
+    fig.subplots_adjust(left=0, right=1, bottom=0, top=1, wspace=0, hspace=0)
+    axs[0].imshow(images["images1"])
+    axs[0].axis("off")
+    axs[1].imshow(images["images2"])
+    axs[1].axis("off")
+    axs[2].imshow(images["mask"], cmap="gray", interpolation="none")
+    axs[2].axis("off")
+    axs[3].imshow(images["prediction"], cmap="gray", interpolation="none")
+    axs[3].axis("off")
+
+    plt.savefig(fname=fname)
+    plt.close(fig)
+    return
+
+
 batch_size = 2
 num_workers = 2
-max_epochs = 100
+max_epochs = 1000
 fast_dev_run = False
 accelerator = "gpu" if torch.cuda.is_available() else "cpu"
 DATA_ROOT = "/app/data"
@@ -67,16 +111,12 @@ DATA_ROOT = "/app/data"
 
 torch.manual_seed(0)
 
-
-# task = torchgeo.trainers.SemanticSegmentationTask(
-#     model="unet",
-#     loss="jaccard",
-#     weights=None,
-#     in_channels=6,
-#     num_classes=2,
-#     lr=0.001,
-#     patience=100,
+# model = mytasks.MySemanticSegmentationTask.load_from_checkpoint(
+#     "output/checkpoints/mylast.ckpt"
 # )
+# # predict with the model
+# trainer.predict(model=model, dataloader=dataloader)
+
 task = mytasks.MySemanticSegmentationTask(
     model="unet",
     loss="jaccard",
@@ -87,7 +127,60 @@ task = mytasks.MySemanticSegmentationTask(
     patience=100,
 )
 
-
+checkpoint_callbacks = [
+    # LOSS #
+    ModelCheckpoint(
+        dirpath="output/checkpoints/top_val_loss",
+        save_top_k=1,
+        monitor="val_loss",
+        mode="min",
+    ),
+    ModelCheckpoint(
+        dirpath="output/checkpoints/top_val_loss_epoch",
+        save_top_k=1,
+        monitor="val_loss_epoch",
+        mode="min",
+    ),
+    # IoU #
+    ModelCheckpoint(
+        dirpath="output/checkpoints/top_val_MulticlassJaccardIndex",
+        save_top_k=1,
+        monitor="val_MulticlassJaccardIndex",
+        mode="max",
+    ),
+    ModelCheckpoint(
+        dirpath="output/checkpoints/top_val_MulticlassJaccardIndex_epoch",
+        save_top_k=1,
+        monitor="val_MulticlassJaccardIndex_epoch",
+        mode="max",
+    ),
+    # OA #
+    ModelCheckpoint(
+        dirpath="output/checkpoints/top_val_MulticlassAccuracy",
+        save_top_k=1,
+        monitor="val_MulticlassAccuracy",
+        mode="max",
+    ),
+    ModelCheckpoint(
+        dirpath="output/checkpoints/top_val_MulticlassAccuracy_epoch",
+        save_top_k=1,
+        monitor="val_MulticlassAccuracy_epoch",
+        mode="max",
+    ),
+    # F1 score #
+    ModelCheckpoint(
+        dirpath="output/checkpoints/top_val_MulticlassF1Score",
+        save_top_k=1,
+        monitor="val_MulticlassF1Score",
+        mode="max",
+    ),
+    ModelCheckpoint(
+        dirpath="output/checkpoints/top_val_MulticlassF1Score_epoch",
+        save_top_k=1,
+        monitor="val_MulticlassF1Score_epoch",
+        mode="max",
+    ),
+]
 trainer = lightning.pytorch.Trainer(
     accelerator=accelerator,
     default_root_dir=constants.OUTPUT_DIR,
@@ -95,6 +188,7 @@ trainer = lightning.pytorch.Trainer(
     log_every_n_steps=1,
     min_epochs=1,
     max_epochs=max_epochs,
+    callbacks=checkpoint_callbacks,
 )
 
 
@@ -105,21 +199,6 @@ trainer = lightning.pytorch.Trainer(
 #     download=True,
 #     bands=("B02", "B03", "B04"),
 # )
-
-
-# def transform(sample):
-#     print(sample["image1"].shape)  # [C, H, W]
-#     print(sample["image2"].shape)  # [C, H, W]
-#     print(sample["mask"].shape)  # [H, W]
-#     transformed = {
-#         "image": torch.cat(tensors=(sample["image1"], sample["image2"]), dim=0),
-#         "mask": sample["mask"],
-#     }
-#     print(transformed["image"].shape)  # [C, H, W]
-#     print(transformed["mask"].shape)  # [H, W]
-#     return transformed
-
-
 # datamodule = torchgeo.datamodules.OSCDDataModule(
 #     root=DATA_ROOT,
 #     batch_size=batch_size,
@@ -127,8 +206,6 @@ trainer = lightning.pytorch.Trainer(
 #     download=True,
 #     bands=("B02", "B03", "B04"),
 # )
-
-
 datamodule = torchgeo.datamodules.LEVIRCDPlusDataModule(
     root=DATA_ROOT,
     batch_size=batch_size,
@@ -137,17 +214,19 @@ datamodule = torchgeo.datamodules.LEVIRCDPlusDataModule(
 )
 
 
-# datamodule.aug.data_keys = ["image", "mask"]
-
-
 trainer.fit(model=task, datamodule=datamodule)
-
+trainer.save_checkpoint("output/checkpoints/latest.ckpt")
 trainer.validate(model=task, datamodule=datamodule)
+trainer.test(model=task, datamodule=datamodule)
+
 
 # TODO
 # - [X] visualize model input data
 # - [X] visualize model output labels
-# - [] train a change detection network
+# - [X] train a change detection network
+# - [X] checkpointing
+# - [X] predicting
+# - [] predict on different data
 # - [] connect sentinel-2 data to pipeline
 # - [] test correctness
 

@@ -7,12 +7,14 @@ COPY requirements.txt requirements.txt
 
 RUN pip install -r requirements.txt && pip freeze > reqs.txt
 
+RUN pip install gdown
+
+RUN pip freeze > reqs.txt
+
 COPY weights/ weights/
 
 COPY src/ src/
 
 # EXPOSE 80/tcp
 
-CMD [ "python", "src/main.py" ]
-
-# CMD ["fastapi", "run", "app/main.py", "--port", "80", "--workers", "2"]
+CMD [ "python", "src/change_detection.py" ]

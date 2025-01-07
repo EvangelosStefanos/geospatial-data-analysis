@@ -4,6 +4,6 @@ services:
     image: gda-tensorboard
     build: .
     ports:
-      - 6006:6006
+      - 6016:6006
     volumes:
-      - ../outputs:/app/outputs
+      - ../output_cd:/app/output:ro
